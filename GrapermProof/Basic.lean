@@ -131,6 +131,58 @@ lemma iter_inj (σ : CircOrder n) (v : Fin n) {j k : ℕ} (hj : j < n) (hk : k <
 lemma fwd_succ (σ : CircOrder n) (v : Fin n) (hn1 : 1 < n) : σ.fwd v (σ.succ v) = 1 :=
   σ.fwd_iter_zero v 1 hn1
 
+/-- Iterating forward is additive. -/
+lemma iter_iter (σ : CircOrder n) (v : Fin n) (k j : ℕ) :
+    σ.iter (σ.iter v k) j = σ.iter v (k + j) := by
+  apply σ.pos.injective
+  rw [pos_iter, pos_iter, pos_iter]
+  exact Fin.ext (by
+    have h : (((σ.pos v).val + k) % n + j) ≡ ((σ.pos v).val + (k + j)) [MOD n] := by
+      have h1 : (((σ.pos v).val + k) % n + j) ≡ ((σ.pos v).val + k) + j [MOD n] :=
+        (Nat.mod_modEq ((σ.pos v).val + k) n).add_right j
+      rwa [Nat.add_assoc] at h1
+    exact h)
+
+/-- Going all the way round the circle returns to the starting point. -/
+lemma iter_n (σ : CircOrder n) (v : Fin n) : σ.iter v n = v := by
+  apply σ.pos.injective
+  rw [pos_iter]
+  exact Fin.ext (by
+    simp [Nat.mod_eq_of_lt (σ.pos v).isLt])
+
+/-- The cyclic predecessor of `v`. -/
+noncomputable def pred (σ : CircOrder n) (v : Fin n) : Fin n := σ.iter v (n - 1)
+
+lemma pred_eq_iter (σ : CircOrder n) (v : Fin n) : σ.pred v = σ.iter v (n - 1) := rfl
+
+/-- The successor of the predecessor is the vertex itself. -/
+lemma succ_pred (σ : CircOrder n) (v : Fin n) : σ.succ (σ.pred v) = v := by
+  have hn : 0 < n := σ.hn
+  rw [succ, pred_eq_iter, iter_iter]
+  have : n - 1 + 1 = n := by omega
+  rw [this, iter_n]
+
+/-- The predecessor of the successor is the vertex itself. -/
+lemma pred_succ (σ : CircOrder n) (v : Fin n) : σ.pred (σ.succ v) = v := by
+  have hn : 0 < n := σ.hn
+  rw [pred_eq_iter, succ, iter_iter]
+  have : 1 + (n - 1) = n := by omega
+  rw [this, iter_n]
+
+/-- The forward distance to the predecessor is `n - 1`. -/
+lemma fwd_pred (σ : CircOrder n) (v : Fin n) : σ.fwd v (σ.pred v) = n - 1 := by
+  have hn : 0 < n := σ.hn
+  rw [pred_eq_iter]
+  exact σ.fwd_iter_zero v (n - 1) (by omega)
+
+/-- The successor and predecessor of a vertex differ (needs at least three vertices). -/
+lemma succ_ne_pred (σ : CircOrder n) (v : Fin n) (h3 : 3 ≤ n) : σ.succ v ≠ σ.pred v := by
+  intro h
+  have h1 : σ.fwd v (σ.succ v) = 1 := σ.fwd_succ v (by omega)
+  have h2 : σ.fwd v (σ.pred v) = n - 1 := σ.fwd_pred v
+  rw [h] at h1
+  omega
+
 end CircOrder
 
 /-- The circular order `σ` is **realizable** for `G`: no two vertex-disjoint edges cross. -/
