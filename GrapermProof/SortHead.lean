@@ -11,6 +11,7 @@ algorithm itself and its structural properties.
 import GrapermProof.SortOpt
 
 set_option linter.style.haveILetI false
+set_option linter.unusedSectionVars false
 
 namespace Graperm
 
@@ -106,5 +107,30 @@ theorem sortHead_eq_head_erase {l : List (List α)} [DecidableEq α] {b : List �
         have hbc' : c ≠ b := fun h => hbc_ne (by rw [h])
         rw [hih, List.erase_cons_tail (by rw [beq_iff_eq]; exact hbc')]
         rw [sortHead, insertHead, ite_eq_right (not_le.mpr hblt)]
+
+/-- The head of a sorted list is below every element. -/
+theorem pairwise_head!_le {R : List α → List α → Prop} {l : List (List α)}
+    (hs : l.Pairwise R) (hrefl : ∀ a, R a a) {x : List α} (hx : x ∈ l) : R l.head! x := by
+  induction l with
+  | nil => exact absurd hx (by simp)
+  | cons a t ih =>
+      rw [List.head!_cons]
+      rcases List.mem_cons.mp hx with hxa | hx'
+      · rw [hxa]; exact hrefl a
+      · exact (List.pairwise_cons.mp hs).1 x hx'
+
+theorem sortHead_ne_nil {l : List (List α)} (h : l ≠ []) : sortHead l ≠ [] := by
+  intro hs
+  refine h (List.Perm.eq_nil ?_)
+  rw [← hs]
+  exact (sortHead_perm l).symm
+
+/-- The minimal-head block of a nonempty list. -/
+theorem minH_mem {l : List (List α)} (h : l ≠ []) : headV (sortHead l) ∈ l :=
+  (sortHead_perm l).mem_iff.mp (headV_mem (sortHead_ne_nil h))
+
+theorem minH_le {l : List (List α)} {x : List α} (hx : x ∈ l) :
+    headV (headV (sortHead l)) ≤ headV x :=
+  pairwise_head!_le (sortHead_pairwise l) (fun _ => le_rfl) ((sortHead_perm l).mem_iff.mpr hx)
 
 end Graperm
