@@ -234,4 +234,68 @@ theorem Dom.sortHead_flatten_le {B T : List (List α)} (hd : Dom B T)
     (sortHead B).flatten ≤ (sortHead T).flatten :=
   Dom.sortHead_flatten_le_aux B.length B T rfl hd hB hT
 
+/-! ### The positional version
+
+For the *block* nodes the children occur in a fixed order, so no re-matching is allowed and
+we use the strictly positional relation `Dom2`. -/
+
+/-- Positional domination of two aligned lists of blocks. -/
+def Dom2 : List (List α) → List (List α) → Prop
+  | [], [] => True
+  | b :: B, t :: T => b ≠ [] ∧ t ≠ [] ∧ b ≤ t ∧ headV b ≤ headV t ∧
+      b.length = t.length ∧ Dom2 B T
+  | _, _ => False
+
+theorem Dom2.toDom : ∀ {B T : List (List α)}, Dom2 B T → Dom B T
+  | [], [], _ => ⟨[], List.Perm.refl [], List.Perm.refl [], by simp⟩
+  | [], _ :: _, h => h.elim
+  | _ :: _, [], h => h.elim
+  | b :: B, t :: T, h => by
+      obtain ⟨hb, ht, hbt, hhead, hlen, hrest⟩ := h
+      obtain ⟨P, hP1, hP2, hPc⟩ := Dom2.toDom hrest
+      exact ⟨(b, t) :: P, by rw [List.map_cons]; exact List.Perm.cons b hP1,
+        by rw [List.map_cons]; exact List.Perm.cons t hP2,
+        by
+          intro p hp
+          rcases List.mem_cons.mp hp with rfl | hp'
+          · exact ⟨hb, ht, hbt, hhead, hlen⟩
+          · exact hPc p hp'⟩
+
+/-- Concatenating a positionally dominated family is monotone. -/
+theorem Dom2.flatten_le : ∀ {B T : List (List α)}, Dom2 B T → B.flatten ≤ T.flatten
+  | [], [], _ => le_refl []
+  | [], _ :: _, h => h.elim
+  | _ :: _, [], h => h.elim
+  | b :: B, t :: T, h => by
+      obtain ⟨hb, ht, hbt, hhead, hlen, hrest⟩ := h
+      rw [List.flatten_cons, List.flatten_cons]
+      rcases eq_or_lt_of_le hbt with hbt' | hbt'
+      · rw [← hbt']; exact append_le_append_left (Dom2.flatten_le hrest)
+      · exact le_of_lt (lt_iff_lex.mpr (lex_append_append (lt_iff_lex.mp hbt') hlen
+          B.flatten T.flatten))
+
+theorem Dom2.refl_of_ne : ∀ {X : List (List α)}, (∀ x ∈ X, x ≠ []) → Dom2 X X
+  | [], _ => trivial
+  | _ :: _, h => ⟨h _ (List.mem_cons_self ..), h _ (List.mem_cons_self ..), le_rfl, le_rfl, rfl,
+      Dom2.refl_of_ne (fun x hx => h x (List.mem_cons_of_mem _ hx))⟩
+
+theorem Dom2.append' (X Y : List (List α)) (hXY : Dom2 X Y) :
+    ∀ {B T : List (List α)}, Dom2 B T → Dom2 (B ++ X) (T ++ Y)
+  | [], [], h => hXY
+  | [], _ :: _, h => h.elim
+  | _ :: _, [], h => h.elim
+  | b :: B, t :: T, h => by
+      obtain ⟨hb, ht, hbt, hhead, hlen, hrest⟩ := h
+      exact ⟨hb, ht, hbt, hhead, hlen, Dom2.append' X Y hXY hrest⟩
+
+theorem Dom2.reverse : ∀ {B T : List (List α)}, Dom2 B T → Dom2 B.reverse T.reverse
+  | [], [], _ => trivial
+  | [], _ :: _, h => h.elim
+  | _ :: _, [], h => h.elim
+  | b :: B, t :: T, h => by
+      obtain ⟨hb, ht, hbt, hhead, hlen, hrest⟩ := h
+      have h' := Dom2.append' [b] [t] ⟨hb, ht, hbt, hhead, hlen, trivial⟩ (Dom2.reverse hrest)
+      rw [List.reverse_cons, List.reverse_cons]
+      exact h'
+
 end Graperm
