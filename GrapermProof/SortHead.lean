@@ -82,6 +82,15 @@ theorem sortHead_pairwise (l : List (List α)) :
   | nil => simp [sortHead]
   | cons b t ih => exact insertHead_pairwise ih
 
+/-- A list that is already sorted by first element is a fixed point of `sortHead`. -/
+theorem sortHead_eq_self_of_pairwise {l : List (List α)}
+    (h : l.Pairwise (fun a c => headV a ≤ headV c)) : sortHead l = l := by
+  induction l with
+  | nil => rfl
+  | cons b t ih =>
+      rw [sortHead, ih (List.Pairwise.of_cons h)]
+      exact insertHead_eq_cons (fun x hx => (List.pairwise_cons.mp h).1 x hx)
+
 /-! ### Peeling off the minimal block -/
 
 /-- Peeling the minimal-head block of a sorted list with pairwise distinct heads. -/

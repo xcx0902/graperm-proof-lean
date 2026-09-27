@@ -234,6 +234,23 @@ theorem Dom.sortHead_flatten_le {B T : List (List α)} (hd : Dom B T)
     (sortHead B).flatten ≤ (sortHead T).flatten :=
   Dom.sortHead_flatten_le_aux B.length B T rfl hd hB hT
 
+/-- `Dom` only depends on the `Perm` class of its right argument. -/
+theorem Dom.perm_right {B T T' : List (List α)} (hd : Dom B T) (h : T.Perm T') :
+    Dom B T' := by
+  obtain ⟨P, hP1, hP2, hPc⟩ := hd
+  exact ⟨P, hP1, hP2.trans h, hPc⟩
+
+/-- **Sorted domination gives a genuine lexicographic bound on the concatenation.**
+
+If `S`'s blocks can each be matched to a block of `T` that dominates it (`Dom S T`), the heads
+on both sides are pairwise distinct and no block is empty, then the greedy sorted concatenation
+of `S` is at most the concatenation of `T` (whatever order the latter comes in). -/
+theorem Dom.sortHead_flatten_le_flatten {S T : List (List α)} (hd : Dom S T)
+    (hndS : (S.map headV).Nodup) (hneT : ∀ x ∈ T, x ≠ []) (hndT : (T.map headV).Nodup) :
+    (sortHead S).flatten ≤ T.flatten :=
+  le_trans (Dom.sortHead_flatten_le hd hndS hndT)
+    (flatten_sorted_min (sortHead_perm T) (sortHead_pairwise T) hneT hndT)
+
 /-! ### The positional version
 
 For the *block* nodes the children occur in a fixed order, so no re-matching is allowed and

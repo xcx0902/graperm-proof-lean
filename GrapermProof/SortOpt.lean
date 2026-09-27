@@ -223,6 +223,27 @@ theorem lt_iff_head_lt {a b : List α} (ha : a ≠ []) (hb : b ≠ [])
     (hne : headV a ≠ headV b) : a < b ↔ headV a < headV b :=
   lt_iff_head!_lt ha hb hne
 
+/-- A `List.Lex` relation starting from a nonempty list never increases the first element. -/
+theorem headV_le_of_lex {a b : List α} (ha : a ≠ []) (h : List.Lex (· < ·) a b) :
+    headV a ≤ headV b := by
+  induction h with
+  | nil => exact absurd rfl ha
+  | rel hab => exact le_of_lt hab
+  | cons _ => exact le_of_eq (by simp [headV, List.head!_cons])
+
+/-- The first element is monotone for the lexicographic order on lists. -/
+theorem headV_le_of_le {a b : List α} (ha : a ≠ []) (h : a ≤ b) : headV a ≤ headV b := by
+  rcases eq_or_lt_of_le h with heq | hlt
+  · rw [heq]
+  · exact headV_le_of_lex ha (lt_iff_lex.mp hlt)
+
+/-- A concatenation of nonempty blocks over a nonempty family is nonempty. -/
+theorem flatten_ne_nil {l : List (List α)} (h : l ≠ []) (hne : ∀ x ∈ l, x ≠ []) :
+    l.flatten ≠ [] := by
+  intro hf
+  rw [List.flatten_eq_nil_iff] at hf
+  exact hne l.head! (headV_mem h) (hf l.head! (headV_mem h))
+
 /-! ### Block-node choice -/
 
 /-- Choose the lex-smaller of the two possible concatenation directions at a block node. -/
