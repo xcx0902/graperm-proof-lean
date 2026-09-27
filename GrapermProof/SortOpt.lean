@@ -107,55 +107,6 @@ theorem nodup_map_eq {β : Type*} {f : α → β} {l : List α} (h : (l.map f).N
         · exact absurd (List.mem_map.mpr ⟨x, hx', hxy⟩) hfa
         · exact ih hnd hx' hy'
 
-/-! ### Sorting items by first element -/
-
-/-- Boolean comparison of two items by their first element. -/
-def byHeadLE (a b : List α) : Bool := decide (headV a ≤ headV b)
-
-/-- The greedy item order: items sorted by first element (stable merge sort). -/
-def sortedByHead (xs : List (List α)) : List (List α) := xs.mergeSort byHeadLE
-
-theorem sortedByHead_perm (xs : List (List α)) : (sortedByHead xs).Perm xs :=
-  List.mergeSort_perm xs byHeadLE
-
-theorem byHeadLE_trans (a b c : List α) :
-    byHeadLE a b = true → byHeadLE b c = true → byHeadLE a c = true := by
-  rw [byHeadLE, byHeadLE, byHeadLE, decide_eq_true_iff, decide_eq_true_iff, decide_eq_true_iff]
-  exact fun h1 h2 => le_trans h1 h2
-
-theorem byHeadLE_total (a b : List α) : (byHeadLE a b || byHeadLE b a) = true := by
-  rw [byHeadLE, byHeadLE, Bool.or_eq_true, decide_eq_true_iff, decide_eq_true_iff]
-  exact le_total (headV a) (headV b)
-
-/-- The sorted order is nondecreasing in the first element. -/
-theorem sortedByHead_pairwise (xs : List (List α)) :
-    (sortedByHead xs).Pairwise (fun a b => headV a ≤ headV b) :=
-  List.Pairwise.imp (fun {_ _} h => by rwa [byHeadLE, decide_eq_true_iff] at h)
-    (List.pairwise_mergeSort byHeadLE_trans byHeadLE_total xs)
-
-/-! ### Pointwise comparison of lists of items -/
-
-/-- Pointwise lexicographic bound on lists of equal-length items. -/
-def PointLe : List (List α) → List (List α) → Prop
-  | [], [] => True
-  | x :: xs, y :: ys => x.length = y.length ∧ x ≤ y ∧ PointLe xs ys
-  | _, _ => False
-
-theorem flatten_le_flatten : ∀ {xs ys : List (List α)}, PointLe xs ys → xs.flatten ≤ ys.flatten
-  | [], [], _ => le_refl []
-  | [], _ :: _, h => h.elim
-  | _ :: _, [], h => h.elim
-  | x :: xs, y :: ys, h => by
-      obtain ⟨hlen, hxy, htl⟩ := h
-      have ih : xs.flatten ≤ ys.flatten := flatten_le_flatten htl
-      rw [List.flatten_cons, List.flatten_cons]
-      rcases eq_or_lt_of_le hxy with heq | hlt
-      · rw [heq]
-        rcases eq_or_lt_of_le ih with heq2 | hlt2
-        · rw [heq2]
-        · exact lex_le (List.Lex.append_left (· < ·) (lt_iff_lex.mp hlt2) y)
-      · exact lex_le (lex_append_append (lt_iff_lex.mp hlt) hlen xs.flatten ys.flatten)
-
 /-! ### Round-node optimality -/
 
 /-- **Round-node optimality.** Sorting a list of nonempty items with pairwise distinct
